@@ -1,184 +1,220 @@
 import sys
 import requests
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout, 
-                             QWidget, QFileDialog, QLabel, QHBoxLayout, QMessageBox, QFrame)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QLabel, 
+                             QFileDialog, QVBoxLayout, QWidget, QMessageBox, 
+                             QHBoxLayout, QFrame, QDialog, QLineEdit)
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QFont, QIcon
-from PyQt5.QtCore import Qt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-class MainWindow(QMainWindow):
+# --- CONFIGURATION ---
+API_URL = "http://127.0.0.1:8000/api"
+
+# --- LOGIN DIALOG (New Corporate Feature) ---
+class LoginDialog(QDialog):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("Secure Login - Chemical Visualizer")
+        self.setFixedSize(300, 200)
+        self.token = None
+
+        layout = QVBoxLayout()
+
+        # Title
+        title = QLabel("Please Log In")
+        title.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+
+        # Inputs
+        self.username = QLineEdit()
+        self.username.setPlaceholderText("Username")
+        layout.addWidget(self.username)
+
+        self.password = QLineEdit()
+        self.password.setPlaceholderText("Password")
+        self.password.setEchoMode(QLineEdit.Password)
+        layout.addWidget(self.password)
+
+        # Login Button
+        self.btn_login = QPushButton("Login")
+        self.btn_login.clicked.connect(self.handle_login)
+        self.btn_login.setStyleSheet("background-color: #007bff; color: white; padding: 5px;")
+        layout.addWidget(self.btn_login)
+
+        self.setLayout(layout)
+
+    def handle_login(self):
+        username = self.username.text()
+        password = self.password.text()
+
+        try:
+            response = requests.post(f"{API_URL}/login/", json={
+                "username": username,
+                "password": password
+            })
+            
+            if response.status_code == 200:
+                self.token = response.json()['token']
+                self.accept()  # Close dialog and proceed
+            else:
+                QMessageBox.warning(self, "Login Failed", "Invalid Username or Password")
+        except Exception as e:
+            QMessageBox.critical(self, "Connection Error", f"Could not connect to server.\n{str(e)}")
+
+# --- WORKER THREAD (Prevents GUI Freezing) ---
+class UploadThread(QThread):
+    finished = pyqtSignal(dict)
+    error = pyqtSignal(str)
+
+    def __init__(self, file_path, token):
+        super().__init__()
+        self.file_path = file_path
+        self.token = token
+
+    def run(self):
+        try:
+            with open(self.file_path, 'rb') as f:
+                # SECURE UPLOAD: Sending Token in Header
+                headers = {'Authorization': f'Token {self.token}'}
+                response = requests.post(
+                    f"{API_URL}/upload/", 
+                    files={'file': f},
+                    headers=headers 
+                )
+            
+            if response.status_code == 200:
+                self.finished.emit(response.json())
+            else:
+                self.error.emit(f"Server Error: {response.text}")
+        except Exception as e:
+            self.error.emit(str(e))
+
+# --- MAIN DASHBOARD ---
+class ChemicalApp(QMainWindow):
+    def __init__(self, token):
+        super().__init__()
+        self.token = token # Store the token for future requests
         self.setWindowTitle("Chemical Equipment Visualizer (Desktop)")
-        self.setGeometry(100, 100, 1100, 800)
-        self.setStyleSheet("background-color: #f4f4f9;") # Match Web Theme
+        self.setGeometry(100, 100, 1000, 700)
+        self.setStyleSheet("background-color: #f4f4f9;")
 
         # Main Layout
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        self.layout = QVBoxLayout(central_widget)
-        self.layout.setContentsMargins(20, 20, 20, 20)
+        main_widget = QWidget()
+        self.setCentralWidget(main_widget)
+        self.layout = QVBoxLayout(main_widget)
 
-        # --- Header Section ---
-        header_layout = QHBoxLayout()
-        
-        # Title
-        title = QLabel("Chemical Visualizer")
-        title.setFont(QFont("Segoe UI", 24, QFont.Bold))
-        title.setStyleSheet("color: #333;")
-        header_layout.addWidget(title)
-        
-        header_layout.addStretch()
+        # Header
+        self.header = QLabel("Chemical Visualizer")
+        self.header.setFont(QFont("Segoe UI", 24, QFont.Bold))
+        self.header.setStyleSheet("color: #333; margin-bottom: 20px;")
+        self.layout.addWidget(self.header)
 
-        # Upload Button
-        self.upload_btn = QPushButton("Upload CSV")
-        self.upload_btn.setFont(QFont("Segoe UI", 12))
-        self.upload_btn.setCursor(Qt.PointingHandCursor)
-        self.upload_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #007bff;
-                color: white;
-                border-radius: 5px;
-                padding: 10px 20px;
-                border: none;
-            }
-            QPushButton:hover {
-                background-color: #0056b3;
-            }
-        """)
-        self.upload_btn.clicked.connect(self.upload_file)
-        header_layout.addWidget(self.upload_btn)
-        
-        self.layout.addLayout(header_layout)
-
-        # --- Stats Cards Section ---
+        # Stats Cards Area
         self.stats_layout = QHBoxLayout()
-        self.stats_layout.setSpacing(20)
-        
-        # Create placeholders for 4 cards
-        self.card_total = self.create_card("Total Units", "-")
-        self.card_temp = self.create_card("Avg Temp", "-")
-        self.card_pressure = self.create_card("Avg Pressure", "-")
-        self.card_flow = self.create_card("Avg Flowrate", "-")
-        
-        self.stats_layout.addWidget(self.card_total)
-        self.stats_layout.addWidget(self.card_temp)
-        self.stats_layout.addWidget(self.card_pressure)
-        self.stats_layout.addWidget(self.card_flow)
-        
+        self.cards = {}
+        for title in ["Total Units", "Avg Temp", "Avg Pressure", "Avg Flowrate"]:
+            card = QFrame()
+            card.setStyleSheet("background-color: white; border-radius: 10px; padding: 10px;")
+            card_layout = QVBoxLayout(card)
+            
+            lbl_title = QLabel(title)
+            lbl_title.setStyleSheet("color: #888; font-size: 14px;")
+            lbl_title.setAlignment(Qt.AlignCenter)
+            
+            lbl_value = QLabel("-")
+            lbl_value.setStyleSheet("color: #333; font-size: 24px; font-weight: bold;")
+            lbl_value.setAlignment(Qt.AlignCenter)
+            
+            card_layout.addWidget(lbl_title)
+            card_layout.addWidget(lbl_value)
+            self.stats_layout.addWidget(card)
+            self.cards[title] = lbl_value
+
         self.layout.addLayout(self.stats_layout)
 
-        # --- Charts Section (Matplotlib) ---
-        # We create a Matplotlib Figure with 2 subplots
-        self.figure, (self.ax1, self.ax2) = plt.subplots(1, 2, figsize=(10, 5))
-        self.figure.patch.set_facecolor('#f4f4f9') # Match background
+        # Upload Button
+        self.upload_btn = QPushButton("Upload CSV & Analyze")
+        self.upload_btn.setFont(QFont("Segoe UI", 12))
+        self.upload_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #007bff; color: white; padding: 10px; border-radius: 5px;
+            }
+            QPushButton:hover { background-color: #0056b3; }
+        """)
+        self.upload_btn.clicked.connect(self.upload_file)
+        self.layout.addWidget(self.upload_btn, alignment=Qt.AlignCenter)
+
+        # Charts Area
+        self.figure, (self.ax1, self.ax2) = plt.subplots(1, 2, figsize=(10, 4))
         self.canvas = FigureCanvas(self.figure)
         self.layout.addWidget(self.canvas)
 
-    def create_card(self, title_text, value_text):
-        """Helper to create a nice looking card widget"""
-        card = QFrame()
-        card.setStyleSheet("""
-            QFrame {
-                background-color: white;
-                border-radius: 10px;
-                border: 1px solid #ddd;
-            }
-        """)
-        layout = QVBoxLayout(card)
-        
-        title = QLabel(title_text)
-        title.setFont(QFont("Segoe UI", 10))
-        title.setStyleSheet("color: #888; border: none;")
-        title.setAlignment(Qt.AlignCenter)
-        
-        value = QLabel(value_text)
-        value.setFont(QFont("Segoe UI", 18, QFont.Bold))
-        value.setStyleSheet("color: #333; border: none;")
-        value.setAlignment(Qt.AlignCenter)
-        
-        layout.addWidget(title)
-        layout.addWidget(value)
-        return card
-
-    def update_card(self, card_widget, value):
-        """Helper to update the value text inside a card"""
-        # The value label is the second item in the layout (index 1)
-        value_label = card_widget.layout().itemAt(1).widget()
-        value_label.setText(str(value))
-
     def upload_file(self):
-        # 1. Open File Dialog
-        fname, _ = QFileDialog.getOpenFileName(self, 'Open file', '.', "CSV files (*.csv)")
-        if not fname:
-            return
-
-        # 2. Send to Django API
-        url = 'http://127.0.0.1:8000/api/upload/'
-        files = {'file': open(fname, 'rb')}
-        
-        try:
+        fname, _ = QFileDialog.getOpenFileName(self, 'Open CSV', '', 'CSV Files (*.csv)')
+        if fname:
             self.upload_btn.setText("Processing...")
             self.upload_btn.setEnabled(False)
-            QApplication.processEvents() # Force UI update
-
-            response = requests.post(url, files=files)
             
-            if response.status_code == 200:
-                data = response.json()
-                self.update_ui(data)
-            else:
-                QMessageBox.critical(self, "Error", f"Server Error: {response.text}")
-                
-        except Exception as e:
-            QMessageBox.critical(self, "Connection Error", 
-                "Could not connect to Backend.\nMake sure Django is running on Port 8000!")
-        finally:
-            self.upload_btn.setText("Upload CSV")
-            self.upload_btn.setEnabled(True)
+            # Start Worker Thread with Token
+            self.worker = UploadThread(fname, self.token)
+            self.worker.finished.connect(self.update_dashboard)
+            self.worker.error.connect(self.show_error)
+            self.worker.start()
 
-    def update_ui(self, data):
-        # 1. Update Cards
-        self.update_card(self.card_total, data['total_count'])
-        self.update_card(self.card_temp, f"{data['avg_temperature']} °C")
-        self.update_card(self.card_pressure, f"{data['avg_pressure']} Pa")
-        self.update_card(self.card_flow, f"{data['avg_flowrate']} L/min")
+    def update_dashboard(self, data):
+        self.upload_btn.setText("Upload CSV & Analyze")
+        self.upload_btn.setEnabled(True)
 
-        # 2. Update Charts
+        # Update Cards
+        self.cards["Total Units"].setText(str(data['total_count']))
+        self.cards["Avg Temp"].setText(f"{data['avg_temperature']} °C")
+        self.cards["Avg Pressure"].setText(f"{data['avg_pressure']} Pa")
+        self.cards["Avg Flowrate"].setText(f"{data['avg_flowrate']} L/min")
+
+        # Update Charts
         self.ax1.clear()
         self.ax2.clear()
 
-        # Chart 1: Bar Chart
+        # Bar Chart
         types = list(data['type_distribution'].keys())
         counts = list(data['type_distribution'].values())
-        bars = self.ax1.bar(types, counts, color='#36A2EB', alpha=0.7)
-        self.ax1.set_title("Equipment Distribution", fontsize=10)
+        self.ax1.bar(types, counts, color='#36a2eb')
+        self.ax1.set_title("Equipment Distribution")
         self.ax1.tick_params(axis='x', rotation=45)
 
-        # Chart 2: Line Chart
+        # Line Chart
         labels = data['chart_data']['labels']
         temps = data['chart_data']['temperature']
         pressures = data['chart_data']['pressure']
         
-        self.ax2.plot(labels, temps, label='Temp (°C)', marker='o', color='#FF6384')
-        self.ax2.plot(labels, pressures, label='Pressure (Pa)', marker='x', color='#36A2EB')
-        self.ax2.set_title("Temperature vs Pressure", fontsize=10)
+        self.ax2.plot(labels, temps, label='Temp', color='#ff6384')
+        self.ax2.plot(labels, pressures, label='Pressure', color='#35a2eb')
+        self.ax2.set_title("Temp vs Pressure")
         self.ax2.legend()
-        self.ax2.grid(True, linestyle='--', alpha=0.5)
+        self.ax2.tick_params(axis='x', rotation=45)
 
-        # Refresh Canvas
         self.figure.tight_layout()
         self.canvas.draw()
+        
+        QMessageBox.information(self, "Success", "Analysis Complete!")
 
+    def show_error(self, message):
+        self.upload_btn.setText("Upload CSV & Analyze")
+        self.upload_btn.setEnabled(True)
+        QMessageBox.critical(self, "Error", message)
+
+# --- APPLICATION ENTRY POINT ---
 if __name__ == '__main__':
-    # Fix for High DPI displays (makes text look sharp)
-    if hasattr(Qt, 'AA_EnableHighDpiScaling'):
-        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-    if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
-        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
     app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec_())
+    
+    # 1. Show Login Dialog First
+    login = LoginDialog()
+    if login.exec_() == QDialog.Accepted:
+        # 2. If Login Success, Show Main App with Token
+        window = ChemicalApp(login.token)
+        window.show()
+        sys.exit(app.exec_())
+    else:
+        sys.exit(0)

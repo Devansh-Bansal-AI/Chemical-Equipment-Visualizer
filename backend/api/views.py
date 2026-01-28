@@ -1,46 +1,63 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated
+from django.http import HttpResponse
 from .models import EquipmentFile
-import pandas as pd
-import os
+from .services import DataService
 
 class UploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]  # <--- Corporate Security: Must be logged in
 
     def post(self, request, *args, **kwargs):
+        if 'file' not in request.FILES:
+            return Response({"error": "No file uploaded"}, status=400)
+
         file_obj = request.FILES['file']
         
-        # 1. Save file to DB
-        equipment_file = EquipmentFile.objects.create(file=file_obj)
-        
-        # 2. History Management (Keep only last 5)
-        files = EquipmentFile.objects.all().order_by('-uploaded_at')
-        if files.count() > 5:
-            for f in files[5:]:
-                f.file.delete() # Delete actual file
-                f.delete()      # Delete DB record
-
-        # 3. Read with Pandas
         try:
-            df = pd.read_csv(equipment_file.file.path)
+            # 1. Save initial record linked to user
+            instance = EquipmentFile.objects.create(file=file_obj, user=request.user)
             
-            # 4. Calculate Stats
-            summary = {
-                "total_count": len(df),
-                "avg_temperature": round(df['Temperature'].mean(), 2),
-                "avg_pressure": round(df['Pressure'].mean(), 2),
-                "avg_flowrate": round(df['Flowrate'].mean(), 2),
-                # Get counts for "Type" (e.g., Reactor: 5, Pump: 2)
-                "type_distribution": df['Type'].value_counts().to_dict(),
-                # Raw data for charts (Temperature vs Pressure)
-                "chart_data": {
-                    "labels": df['Equipment Name'].tolist(),
-                    "temperature": df['Temperature'].tolist(),
-                    "pressure": df['Pressure'].tolist()
-                }
-            }
+            # 2. Process Data via Service Layer (Clean Architecture)
+            summary = DataService.process_csv(instance.file.path)
+            
+            # 3. Save Summary to DB
+            instance.summary_data = summary
+            instance.save()
+
+            # 4. History Management (Keep last 5 per user)
+            user_files = EquipmentFile.objects.filter(user=request.user).order_by('-uploaded_at')
+            if user_files.count() > 5:
+                for f in user_files[5:]:
+                    f.file.delete()
+                    f.delete()
+            
+            # Add the file_id to the response so the frontend can request the PDF later
+            summary['file_id'] = instance.id
             return Response(summary, status=200)
-            
-        except Exception as e:
+
+        except ValueError as e:
             return Response({"error": str(e)}, status=400)
+        except Exception as e:
+            return Response({"error": f"Internal Server Error: {str(e)}"}, status=500)
+
+class PDFReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, file_id):
+        try:
+            # Ensure user can only download their own reports
+            instance = EquipmentFile.objects.get(id=file_id, user=request.user)
+            
+            if not instance.summary_data:
+                return Response({"error": "No analysis data found"}, status=404)
+            
+            pdf_buffer = DataService.generate_pdf(instance.summary_data)
+            
+            response = HttpResponse(pdf_buffer, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="report_{file_id}.pdf"'
+            return response
+        except EquipmentFile.DoesNotExist:
+            return Response({"error": "File not found or unauthorized"}, status=404)

@@ -91,26 +91,23 @@ python main.py
 📡 API Documentation
 ```
 
-The backend exposes the following REST endpoints:
+## The backend exposes the following REST endpoints:
 
-Method	Endpoint	Description	Auth Required
-POST	/api/login/	Obtains Auth Token	❌
-POST	/api/upload/	Upload CSV & Get Stats	✅
-GET	/api/report/<id>	Download Analysis PDF	✅
-🧪 Sample Data
+| **Method** | **Endpoint** | **Description** |	**Auth Required** |
+| POST |	/api/login/ | Obtains Auth Token | ❌ |
+| POST | /api/upload/ | Upload CSV & Get Stats | ✅ |
+| GET	| /api/report/<id> |	Download Analysis PDF |	✅ |
+
+## 🧪 Sample Data
 
 A file named sample_equipment_data.csv is included in the root directory for testing.
 
-Columns Included:
+## Columns Included:
 
 Equipment Name
-
 Type
-
 Flowrate
-
 Pressure
-
 Temperature
 
 🤝 Contribution

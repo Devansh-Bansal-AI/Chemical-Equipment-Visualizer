@@ -85,6 +85,48 @@ Access the Web App at the link provided (usually http://localhost:5173)3️⃣ D
 # Install GUI dependencies
 pip install PyQt5 requests matplotlib
 
-# Run Application
+🚀 Run Application
 python main.py
-📡 API DocumentationThe backend exposes the following REST endpoints:MethodEndpointDescriptionAuth RequiredPOST/api/login/Obtains Auth Token❌POST/api/upload/Upload CSV & Get Stats✅GET/api/report/<id>/Download Analysis PDF✅🧪 Sample DataA sample_equipment_data.csv file is included in the root directory for testing. It contains the following columns:Equipment NameTypeFlowratePressureTemperature🤝 ContributionFork the repository.Create a feature branch (git checkout -b feature/NewFeature).Commit your changes.Push to the branch and open a Pull Request.Developed by Devansh Bansal Computer Science Engineering Student ```
+
+📡 API Documentation
+```
+
+The backend exposes the following REST endpoints:
+
+Method	Endpoint	Description	Auth Required
+POST	/api/login/	Obtains Auth Token	❌
+POST	/api/upload/	Upload CSV & Get Stats	✅
+GET	/api/report/<id>	Download Analysis PDF	✅
+🧪 Sample Data
+
+A file named sample_equipment_data.csv is included in the root directory for testing.
+
+Columns Included:
+
+Equipment Name
+
+Type
+
+Flowrate
+
+Pressure
+
+Temperature
+
+🤝 Contribution
+
+Fork the repository
+
+Create a feature branch
+
+git checkout -b feature/NewFeature
+
+
+Commit your changes
+
+Push to the branch and open a Pull Request
+
+👨‍💻 Developer
+
+Devansh Bansal
+Computer Science Engineering Student

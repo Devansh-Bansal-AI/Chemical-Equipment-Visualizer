@@ -1,54 +1,90 @@
-# Chemical Equipment Parameter Visualizer (Hybrid App)
+# 🧪 Chemical Equipment Parameter Visualizer
 
-## 📌 Project Overview
-A hybrid analytics application developed for the FOSSEE Internship Screening. This system allows users to upload chemical equipment data (CSV) and visualizes key parameters like Temperature, Pressure, and Flowrate. 
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![Django](https://img.shields.io/badge/Django-5.0-green)
+![React](https://img.shields.io/badge/React-18-cyan)
+![PyQt5](https://img.shields.io/badge/Desktop-PyQt5-orange)
+![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
-It features a **Single Backend (Django)** that serves two distinct frontends:
-1.  **Web Application:** Built with React.js & Chart.js for browser access.
-2.  **Desktop Application:** Built with PyQt5 & Matplotlib for native desktop access.
+> **A Hybrid Analytics Platform developed for the FOSSEE Summer Fellowship Screening.** > Seamlessly visualizes chemical equipment data across **Web (React)** and **Desktop (PyQt)** environments using a centralized Django API.
+
+---
+
+## 📸 Project Demo
+
+| **Web Dashboard (React + Chart.js)** | **Desktop Client (PyQt5 + Matplotlib)** |
+|:------------------------------------:|:---------------------------------------:|
+| ![Web Screenshot](screenshots/web-demo.png) | ![Desktop Screenshot](screenshots/desktop-demo.png) |
+| *Modern, responsive dashboard for remote analytics.* | *Native application for on-premise/offline control.* |
+
+---
+
+## 🚀 Key Features
+
+* **Hybrid Architecture:** A single **Django REST API** serves two distinct frontends (Web & Desktop), ensuring logic consistency.
+* **Corporate-Grade Security:** Implements **JWT-style Token Authentication** to secure API endpoints.
+* **Clean Code Architecture:** logic is decoupled into a **Service Layer (`services.py`)**, separating business logic from HTTP views for better testability.
+* **Automated Reporting:** Generates downloadable **PDF Reports** with statistical summaries on the fly.
+* **Data Persistence:** Maintains a history of the last 5 uploads per user using **SQLite**.
+* **Advanced Visualization:** * **Web:** Interactive `Chart.js` graphs.
+    * **Desktop:** Scientific plotting with `Matplotlib`.
+
+---
 
 ## 🛠️ Tech Stack
-* **Backend:** Python Django 5, Django REST Framework, Pandas (Data Analysis)
-* **Web Frontend:** React.js, Vite, Chart.js, Axios
-* **Desktop Frontend:** Python PyQt5, Matplotlib, Requests
-* **Database:** SQLite (Auto-cleans history to keep latest 5 uploads)
 
-## 🚀 How to Run
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Backend** | Django + DRF | REST API, Auth, Business Logic |
+| **Data Processing** | Pandas | CSV Parsing, Statistical Analysis |
+| **Web Frontend** | React.js + Vite | Responsive Web Dashboard |
+| **Desktop Frontend** | PyQt5 | Native GUI Application |
+| **Visualization** | Chart.js / Matplotlib | Data Rendering |
+| **Database** | SQLite | Lightweight Data Storage |
 
-### Step 1: Start the Backend
-The backend must be running for both apps to work.
+---
+
+## ⚙️ Installation & Setup Guide
+
+### Prerequisites
+* Python 3.8+
+* Node.js & npm
+* Git
+
+### 1️⃣ Backend Setup (Django)
+The backend is the heart of the application. Start it first.
+
 ```bash
-cd backend
-# Windows:
+# Clone the repository
+git clone [https://github.com/yourusername/chemical-visualizer.git](https://github.com/yourusername/chemical-visualizer.git)
+cd chemical-visualizer/backend
+
+# Create virtual environment (Optional but recommended)
 python -m venv venv
-venv\Scripts\activate
+# Windows: venv\Scripts\activate
+# Mac/Linux: source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
+
+# Run Migrations & Create Admin User
+python manage.py migrate
+python manage.py createsuperuser  # <--- Create your login credentials here!
+
+# Start Server
 python manage.py runserver
-# Server will start at [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
-Step 2: Run the Web App
-Bash
+Server will run at: http://127.0.0.1:8000/2️⃣ Web Frontend Setup (React)Open a new terminal.Bashcd ../web-frontend
 
-cd web-frontend
+# Install dependencies
 npm install
+
+# Run Development Server
 npm run dev
-# Open the link provided (e.g., http://localhost:5173)
-Step 3: Run the Desktop App
-Bash
+Access the Web App at the link provided (usually http://localhost:5173)3️⃣ Desktop App Setup (PyQt)Open a new terminal.Bashcd ../desktop-frontend
 
-cd desktop-frontend
+# Install GUI dependencies
 pip install PyQt5 requests matplotlib
+
+# Run Application
 python main.py
-📂 Project Structure
-Plaintext
-
-ChemicalVisualizer/
-├── backend/            # Django API & Logic
-├── web-frontend/       # React Source Code
-├── desktop-frontend/   # PyQt5 Source Code
-└── sample_equipment_data.csv  # Test Data
-✨ Key Features
-Unified API: Both platforms use the same logic, ensuring data consistency.
-
-Data Analysis: Automatically calculates averages and equipment distributions.
-
-Interactive Charts: Dynamic visualization of Temperature vs. Pressure profiles.
+📡 API DocumentationThe backend exposes the following REST endpoints:MethodEndpointDescriptionAuth RequiredPOST/api/login/Obtains Auth Token❌POST/api/upload/Upload CSV & Get Stats✅GET/api/report/<id>/Download Analysis PDF✅🧪 Sample DataA sample_equipment_data.csv file is included in the root directory for testing. It contains the following columns:Equipment NameTypeFlowratePressureTemperature🤝 ContributionFork the repository.Create a feature branch (git checkout -b feature/NewFeature).Commit your changes.Push to the branch and open a Pull Request.Developed by Devansh Bansal Computer Science Engineering Student ```

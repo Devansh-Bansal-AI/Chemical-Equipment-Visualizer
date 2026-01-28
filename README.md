@@ -90,6 +90,7 @@ python main.py
 
 📡 API Documentation
 ```
+---
 
 ## The backend exposes the following REST endpoints:
 
@@ -97,6 +98,8 @@ python main.py
 | POST |	/api/login/ | Obtains Auth Token | ❌ |
 | POST | /api/upload/ | Upload CSV & Get Stats | ✅ |
 | GET	| /api/report/<id> |	Download Analysis PDF |	✅ |
+
+---
 
 ## 🧪 Sample Data
 

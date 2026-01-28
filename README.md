@@ -1,7 +1,3 @@
-Recruiters often read this before running the code. Create a file named README.md in your root folder (K:\ChemicalVisualizer\README.md) and paste this professional documentation.
-
-Markdown
-
 # Chemical Equipment Parameter Visualizer (Hybrid App)
 
 ## 📌 Project Overview

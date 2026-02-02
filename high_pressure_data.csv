@@ -1,0 +1,11 @@
+Equipment Name,Type,Flowrate,Pressure,Temperature
+Reactor-Alpha,Reactor,45.5,2500,185.0
+Compressor-X1,Compressor,120.0,3100,220.5
+Separator-01,Separator,80.2,2100,150.0
+Reactor-Beta,Reactor,50.0,2650,195.2
+Compressor-X2,Compressor,115.0,2950,210.0
+Relief Valve A,Valve,0.0,100,25.0
+Reactor-Gamma,Reactor,48.0,2550,188.5
+Pipe-Line-H1,Pipe,300.0,2000,160.0
+Separator-02,Separator,85.0,2050,145.0
+Compressor-Z1,Compressor,130.0,3200,230.0

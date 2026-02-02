@@ -1,0 +1,11 @@
+Equipment Name,Type,Flowrate,Pressure,Temperature
+Main Pump A,Pump,550.0,350,25.0
+Heat Exchanger 1,Heat Exchanger,540.0,340,30.5
+Cooling Tower 1,Cooling Tower,1200.0,100,22.0
+Main Pump B,Pump,560.0,355,26.0
+Heat Exchanger 2,Heat Exchanger,535.0,345,32.0
+Return Pipe 1,Pipe,600.0,150,24.0
+Filter Unit A,Filter,580.0,330,25.5
+Cooling Tower 2,Cooling Tower,1150.0,100,21.5
+Booster Pump C,Pump,400.0,450,28.0
+Valve Inlet,Valve,600.0,200,23.0
